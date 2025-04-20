@@ -13,7 +13,7 @@ def send_otp_email(receiver_email: EmailStr) -> str:
     smtp_port = 587
 
     # Generate OTP
-    otp = "".join(random.choices(string.digits, k=6))
+    otp = "".join(random.choices(string.digits, k=4))
 
     subject = "Your DayTask OTP Code"
 

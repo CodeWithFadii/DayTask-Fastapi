@@ -53,7 +53,7 @@ def login(credential: schemas.UserLogin, db: Session = Depends(get_db)):
 @router.post(
     "/register", response_model=schemas.UserAuthOut, status_code=status.HTTP_201_CREATED
 )
-def create_user(user: schemas.UserRegister, db: Session = Depends(get_db)):
+def register(user: schemas.UserRegister, db: Session = Depends(get_db)):
     try:
         existing = db.query(models.User).filter(models.User.email == user.email).first()
         if existing:
