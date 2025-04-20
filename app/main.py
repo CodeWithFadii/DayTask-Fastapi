@@ -27,4 +27,4 @@ app.include_router(user.router)
 
 @app.get("/")
 def root():
-    return {"message": "This is a Inta clone project"}
+    return {"message": "This is a Day Task project"}
