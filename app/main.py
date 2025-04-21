@@ -3,8 +3,20 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .routers import auth, user
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 # Initialize FastAPI app
 app = FastAPI()
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace "*" with your frontend domain for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Custom error handler for validation errors
