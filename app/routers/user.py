@@ -2,15 +2,9 @@ from typing import Optional
 from uuid import UUID
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from app import models, oauth2, schemas, utils
+from app import models, oauth2, schemas
 from app.database import get_db
 
-from fastapi import File, UploadFile
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import shutil
-import os
-import uuid
 
 router = APIRouter(tags=["Users"])
 
@@ -110,25 +104,3 @@ def get_users_with_cursor(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{str(e)}",
         )
-
-
-# Static file serving
-UPLOAD_FOLDER = "static/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-router.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-# Upload route
-@router.post("/upload-image")
-async def upload_image(file: UploadFile = File(...)):
-    ext = file.filename.split(".")[-1] # type: ignore
-    filename = f"{uuid.uuid4()}.{ext}"
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    return {
-        "filename": filename,
-        "url": f"http://13.50.169.165/static/uploads/{filename}",
-    }

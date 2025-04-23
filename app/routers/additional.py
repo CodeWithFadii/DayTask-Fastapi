@@ -19,11 +19,6 @@ router.mount("/static", StaticFiles(directory="static"), name="static")
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 
-# Static file serving
-UPLOAD_FOLDER = "static/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-router.mount("/static", StaticFiles(directory="static"), name="static")
-
 
 # Upload route
 @router.post("/upload-image")
