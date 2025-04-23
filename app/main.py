@@ -1,9 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-
-from app.routers import additional
-from .routers import auth, user
+from .routers import auth, user, additional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
