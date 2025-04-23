@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+from app.routers import additional
 from .routers import auth, user
 
 from fastapi import FastAPI
@@ -35,6 +37,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(additional.router)
 
 
 @app.get("/")
