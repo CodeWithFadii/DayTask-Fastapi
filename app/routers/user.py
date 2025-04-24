@@ -9,13 +9,42 @@ from app.database import get_db
 router = APIRouter(tags=["Users"])
 
 
-# Getting a user by Token
+# Getting current user
 @router.get("/user", response_model=schemas.UserOut)
 def get_current_user(
     user_data: schemas.User = Depends(oauth2.get_current_user),
 ):
     try:
         return schemas.UserOut(user=user_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {str(e)}",
+        )
+
+
+# PATCH /user/edit
+@router.put("/user/edit", response_model=schemas.UserOut)
+def edit_current_user(
+    user_edit: schemas.UserEdit,
+    user_data: schemas.User = Depends(oauth2.get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        user_query = db.query(models.User).filter(models.User.id == user_data.id)
+        user = user_query.first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No user found",
+            )
+
+        user_query.update(user_edit.model_dump(), synchronize_session=False)  # type: ignore
+        db.commit()
+        db.refresh(user)  # Refresh to get updated values
+        return schemas.UserOut(user=user)
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 # User schema ------------------
@@ -23,13 +23,19 @@ class UserLogin(UserBase):
 
 class User(BaseModel):
     id: UUID
-    email: str
+    email: EmailStr
     name: str
-    profile_img: Optional[str] = "null"
+    profile_img: Optional[str] = ""
     user_type: Optional[str] = "email"
     created_at: datetime
 
     model_config = {"from_attributes": True, "json_encoders": {UUID: lambda v: str(v)}}
+
+
+class UserEdit(BaseModel):
+    name: str
+    profile_img: Optional[str] = ""
+    user_type: str
 
 
 class UserOut(BaseModel):
@@ -40,13 +46,14 @@ class UserAuthOut(BaseModel):
     access_token: str
     token_type: str
     user: User
-    
-    
+
+
 class ChangePassword(BaseModel):
     email: EmailStr
     old_password: str
-    new_password:str
-    
+    new_password: str
+
+
 class ChangePasswordOut(BaseModel):
     success: bool
     message: str
@@ -71,6 +78,7 @@ class PaginatedUsers(BaseModel):
     users: List[User]
     total_count: int
     next_cursor: Optional[UUID]
+
 
 # Otp schema------------------
 
