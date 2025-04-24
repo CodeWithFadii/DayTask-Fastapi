@@ -1,9 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
-import shutil
-import os
-import uuid
-import pytesseract
-import re
+import os, uuid, pytesseract, shutil, re
 from app.utils import preprocess_image  # Make sure this exists and works
 
 router = APIRouter(tags=["Additional"])
@@ -19,17 +15,20 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 # Route: Upload image
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
-    ext = file.filename.split(".")[-1]  # type: ignore
-    filename = f"{uuid.uuid4()}.{ext}"
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    try:
+        ext = file.filename.split(".")[-1]  # type: ignore
+        filename = f"{uuid.uuid4()}.{ext}"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    return {
-        "filename": filename,
-        "url": f"http://13.50.169.165/static/uploads/{filename}",
-    }
+        return {
+            "filename": filename,
+            "url": f"http://13.50.169.165/static/uploads/{filename}",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
 
 # Route: Read text from image
