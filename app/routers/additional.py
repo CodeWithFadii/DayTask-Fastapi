@@ -19,7 +19,7 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 # Route: Upload image
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
-    ext = file.filename.split(".")[-1] # type: ignore
+    ext = file.filename.split(".")[-1]  # type: ignore
     filename = f"{uuid.uuid4()}.{ext}"
     file_path = os.path.join(UPLOAD_FOLDER, filename)
 
@@ -35,13 +35,13 @@ async def upload_image(file: UploadFile = File(...)):
 # Route: Read text from image
 @router.post("/read-text")
 async def read_text(file: UploadFile = File(...)):
-    if not file.content_type.startswith("image/"): # type: ignore
+    if not file.content_type.startswith("image/"):  # type: ignore
         raise HTTPException(status_code=400, detail="Please upload a valid image.")
 
     try:
         contents = await file.read()
         image = preprocess_image(contents)
-        text = pytesseract.image_to_string(image)
+        text = pytesseract.image_to_string(image, lang="eng")
         cleaned_text = re.sub(r"[^\x00-\x7F]+", "", text).strip()
         return {"text": cleaned_text}
     except Exception as e:
