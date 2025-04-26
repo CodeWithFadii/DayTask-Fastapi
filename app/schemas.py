@@ -59,6 +59,35 @@ class ChangePasswordOut(BaseModel):
     message: str
 
 
+# Task schema------------------
+
+
+class TaskBase(BaseModel):
+    owner_id: Optional[str] = ""
+    title: str
+    details: str
+    team_members: Optional[List[str]] = []
+    date: str
+    time: str
+
+
+class TaskCreate(TaskBase):
+    pass
+
+
+class Task(BaseModel):
+    id: UUID
+    owner_id: str
+    title: str
+    details: str
+    team_members: Optional[List[str]] = []
+    date: str
+    time: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True, "json_encoders": {UUID: lambda v: str(v)}}
+
+
 # JWT Token schema------------------
 
 
@@ -90,6 +119,9 @@ class OtpOut(BaseModel):
 
 class Otp(BaseModel):
     email: EmailStr
+
+
+# Pdf schema------------------
 
 
 class ExtractionResult(BaseModel):
