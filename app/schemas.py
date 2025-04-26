@@ -90,3 +90,9 @@ class OtpOut(BaseModel):
 
 class Otp(BaseModel):
     email: EmailStr
+
+
+class ExtractionResult(BaseModel):
+    filename: str
+    text: str | None = None  # Optional text field
+    error: str | None = None

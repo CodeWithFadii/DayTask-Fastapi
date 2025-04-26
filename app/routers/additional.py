@@ -1,5 +1,8 @@
+from typing import List
 from fastapi import APIRouter, File, UploadFile, HTTPException
+import fitz
 import os, uuid, pytesseract, shutil, re
+from app import schemas
 from app.utils import preprocess_image  # Make sure this exists and works
 
 router = APIRouter(tags=["Additional"])
@@ -45,3 +48,48 @@ async def read_text(file: UploadFile = File(...)):
         return {"text": cleaned_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read text: {str(e)}")
+
+
+@router.post("/read-pdf", response_model=List[schemas.ExtractionResult])
+async def read_pdf(files: List[UploadFile] = File(...)):
+    # Check if any files were uploaded
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded.")
+
+    results = []
+    for file in files:
+        # Validate that the file is a PDF
+        if file.content_type != "application/pdf":
+            results.append(
+                schemas.ExtractionResult(filename=file.filename, error="Not a PDF file.")  # type: ignore
+            )
+            continue
+
+        try:
+            # Read the file contents asynchronously
+            contents = await file.read()
+
+            # Load the PDF from bytes
+            pdf = fitz.open(stream=contents, filetype="pdf")
+
+            # Extract text from all pages
+            text = ""
+            for page in pdf:
+                text += page.get_text()  # type: ignore
+
+            # Clean the extracted text
+            cleaned_text = text.strip()
+
+            # Close the PDF to free resources
+            pdf.close()
+
+            # Add successful extraction to results
+            results.append(schemas.ExtractionResult(filename=file.filename, text=cleaned_text))  # type: ignore
+
+        except Exception as e:
+            # Add error information if processing fails
+            results.append(
+                schemas.ExtractionResult(filename=file.filename, error=str(e))  # type: ignore
+            )
+
+    return results
