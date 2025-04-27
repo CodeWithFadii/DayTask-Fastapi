@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import ARRAY, UUID, Column, Integer, String, DateTime, text
+from sqlalchemy import ARRAY, UUID, Column, Integer, String, DateTime, text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -46,6 +46,7 @@ class Task(Base):
     team_members = Column(ARRAY(String), nullable=True)
     time = Column(String, nullable=False)
     date = Column(String, nullable=False)
+    is_completed = Column(Boolean, nullable=True, default=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

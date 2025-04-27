@@ -63,7 +63,6 @@ class ChangePasswordOut(BaseModel):
 
 
 class TaskBase(BaseModel):
-    owner_id: Optional[str] = ""
     title: str
     details: str
     team_members: Optional[List[str]] = []
@@ -72,6 +71,11 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
+    owner_id: Optional[str] = ""
+    pass
+
+
+class TaskUpdate(TaskBase):
     pass
 
 
@@ -83,6 +87,7 @@ class Task(BaseModel):
     team_members: Optional[List[str]] = []
     date: str
     time: str
+    is_completed: Optional[bool] = False
     created_at: datetime
 
     model_config = {"from_attributes": True, "json_encoders": {UUID: lambda v: str(v)}}
