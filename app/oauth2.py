@@ -21,7 +21,7 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire_time = datetime.now() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire_time})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) # type: ignore
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)  # type: ignore
     return encoded_jwt
 
 
@@ -46,12 +46,29 @@ def get_current_user(
 ):
     exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=f"Could not validate credentials",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    token_data = verify_access_token(token=token, exception=exception)
-    user = db.query(models.User).filter(models.User.id == token_data.id).first()
-    return user
+
+    try:
+        token_data = verify_access_token(token=token, exception=exception)
+        print(token_data.id)
+        user = db.query(models.User).filter(models.User.id == token_data.id).first()
+
+        if user is None:
+            raise exception
+
+        return user
+
+    except JWTError:
+        raise exception
+
+    except Exception as e:
+        # Optional: log this or raise a more specific HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Something went wrong in authentication: {str(e)}",
+        )
 
 
 def check_token_validity(

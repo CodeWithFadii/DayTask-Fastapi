@@ -11,7 +11,7 @@ router = APIRouter(tags=["Tasks"], prefix="/tasks")
 
 
 # Getting my tasks
-@router.get("/my", response_model=List[schemas.Task])
+@router.get("/", response_model=List[schemas.Task])
 def get_my_tasks(
     user_data: schemas.User = Depends(oauth2.get_current_user),
     db: Session = Depends(get_db),
@@ -38,9 +38,7 @@ def get_my_tasks(
 
 
 # Creating new task
-@router.post(
-    "/create", response_model=schemas.Task, status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=schemas.Task, status_code=status.HTTP_201_CREATED)
 def create_task(
     new_task: schemas.TaskCreate,
     user_data: schemas.User = Depends(oauth2.get_current_user),
@@ -68,8 +66,42 @@ def create_task(
         )
 
 
+# Deleting task
+@router.delete(
+    "/{id}/", status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_task(
+    id: UUID,
+    user_data: schemas.User = Depends(oauth2.get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        task_query = db.query(models.Task).filter(models.Task.id == id)
+        db_task = task_query.first()
+        # No tasks found with id in db
+        if not db_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No task found.",
+            )
+        # User can only edit his own tasks
+        if db_task.owner_id != str(user_data.id): # type: ignore
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized to edit this task.",
+            )
+        task_query.delete(synchronize_session=False)
+        db.commit()
+
+    except SQLAlchemyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error: " + str(e),
+        )
+
+
 # Editing task
-@router.put("/{id}/edit", response_model=schemas.Task)
+@router.put("/{id}/", response_model=schemas.Task)
 def update_task(
     id: UUID,
     updated_task: schemas.TaskUpdate,
@@ -86,12 +118,12 @@ def update_task(
                 detail="No task found.",
             )
         # User can only edit his own tasks
-        if db_task.owner_id != str(user_data.id):
+        if db_task.owner_id != str(user_data.id): # type: ignore
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Unauthorized to edit this task.",
             )
-        task_query.update(updated_task.model_dump(), synchronize_session=False)
+        task_query.update(updated_task.model_dump(), synchronize_session=False) # type: ignore
         db.commit()
         db.refresh(db_task)
 
