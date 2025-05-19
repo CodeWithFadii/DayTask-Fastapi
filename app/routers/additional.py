@@ -3,6 +3,12 @@ from fastapi import APIRouter, File, UploadFile, HTTPException
 import fitz
 import os, uuid, pytesseract, shutil, re
 from app import schemas
+from deepface import DeepFace
+from PIL import Image
+import io
+import cv2
+import numpy as np
+from fastapi.responses import JSONResponse
 from app.utils import preprocess_image  # Make sure this exists and works
 
 router = APIRouter(tags=["Additional"])
@@ -20,7 +26,7 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 async def upload_image(file: UploadFile = File(...)):
     try:
         ext = file.filename.split(".")[-1]  # type: ignore
-        filename = f"{uuid.uuid4()}.{ext}"
+        filename = f"{uuid.uuid4()}=-0987654321.{ext}"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
 
         with open(file_path, "wb") as buffer:
@@ -93,3 +99,22 @@ async def read_pdf(files: List[UploadFile] = File(...)):
             )
 
     return results
+
+
+def read_image(file: UploadFile):
+    content = np.frombuffer(file.file.read(), np.uint8)
+    image = cv2.imdecode(content, cv2.IMREAD_COLOR)
+    return image
+
+
+@router.post("/verify-face")
+async def verify_faces(image1: UploadFile = File(...), image2: UploadFile = File(...)):
+    img1 = read_image(image1)
+    img2 = read_image(image2)
+
+    try:
+        result = DeepFace.verify(img1, img2, enforce_detection=True)
+        is_verified = result["verified"]
+        return {"match": is_verified}
+    except Exception as e:
+        return {"error": str(e)}
