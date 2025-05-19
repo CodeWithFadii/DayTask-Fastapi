@@ -13,6 +13,10 @@ from app.utils import preprocess_image  # Make sure this exists and works
 
 router = APIRouter(tags=["Additional"])
 
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # Setup upload folder
 UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
