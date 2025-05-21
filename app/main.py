@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import auth, task, user # Ensure proper import paths
+from app.routers import auth, face_match, task, user # Ensure proper import paths
 
 app = FastAPI()
 
@@ -38,6 +38,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(task.router)
+app.include_router(face_match.router)
 
 
 @app.get("/")
