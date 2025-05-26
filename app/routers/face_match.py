@@ -1,5 +1,4 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, status
-from fastapi.responses import JSONResponse
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
