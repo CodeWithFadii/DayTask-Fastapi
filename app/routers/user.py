@@ -1,6 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from fastapi import Depends, HTTPException, status, APIRouter
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from app import models, oauth2, schemas
 from app.database import get_db
@@ -31,7 +32,8 @@ def edit_current_user(
     db: Session = Depends(get_db),
 ):
     try:
-        user_query = db.query(models.User).filter(models.User.id == user_data.id)
+        user_query = db.query(models.User).filter(
+            user_data.id == models.User.id)
         user = user_query.first()
 
         if not user:
@@ -63,7 +65,7 @@ def get_user_by_id(
     db: Session = Depends(get_db),
 ):
     try:
-        user_query = db.query(models.User).filter(models.User.id == id)
+        user_query = db.query(models.User).filter(id == models.User.id)
         user = user_query.first()
 
         if not user:
@@ -133,3 +135,4 @@ def get_users_with_cursor(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{str(e)}",
         )
+

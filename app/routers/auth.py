@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status, APIRouter
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from app import models, oauth2, schemas, utils
 from app.database import get_db
@@ -15,7 +16,8 @@ router = APIRouter(tags=["Authentication"])
 def login(credential: schemas.UserLogin, db: Session = Depends(get_db)):
     try:
         user = (
-            db.query(models.User).filter(models.User.email == credential.email).first()
+            db.query(models.User).filter(
+                credential.email == models.User.email).first()
         )
 
         if not user:
@@ -225,9 +227,25 @@ async def google_auth(code: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}",
         )
-        
-        
-        
-        
-        
-# client-id = 151562397949-31badqvl99slo1v8p8j50l0logtigosm.apps.googleusercontent.com
+
+
+router.post(
+    "/email_available",
+    response_model= bool,
+)
+def is_email_available(
+        email: EmailStr,
+        db: Session = Depends(get_db),
+):
+    try:
+        user =  db.query(models.User).filter(email == models.User.email).first()
+        if not user:
+            return False
+        else:
+            return True
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{str(e)}",
+        )
