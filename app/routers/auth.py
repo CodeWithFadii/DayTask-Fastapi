@@ -1,9 +1,12 @@
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import Depends, HTTPException, status, APIRouter, Body
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from app import models, oauth2, schemas, utils
+from app.config import settings
 from app.database import get_db
 from sqlalchemy.exc import SQLAlchemyError
+
+from app.schemas import EmailRequest, CodeRequest
 from app.services.otp_service import send_otp_email
 import httpx
 import os
@@ -142,110 +145,78 @@ def send_otp(request: schemas.Otp):
             detail=f"Error sending otp: {str(e)}",
         )
 
-# New Google authentication route
-@router.post("/google_auth", response_model=schemas.UserAuthOut)
-async def google_auth(code: str, db: Session = Depends(get_db)):    
-    try:
-        # Exchange authorization code for access token
-        async with httpx.AsyncClient() as client:
-            token_response = await client.post(
-                "https://oauth2.googleapis.com/token",
-                data={
-                    "code": code,
-                    "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-                    "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-                    "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI"),
-                    "grant_type": "authorization_code",
-                },
-            )
-
-        if token_response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Failed to obtain access token from Google",
-            )
-
-        token_data = token_response.json()
-        access_token = token_data.get("access_token")
-
-        # Fetch user info from Google
-        async with httpx.AsyncClient() as client:
-            user_response = await client.get(
-                "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-
-        if user_response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Failed to fetch user info from Google",
-            )
-
-        user_data = user_response.json()
-        email = user_data.get("email")
-        name = user_data.get("name", "Google User")
-
-        if not email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email not provided by Google",
-            )
-
-        # Check if user exists in the database
-        user = db.query(models.User).filter(models.User.email == email).first()
-
-        if not user:
-            # Create a new user if they don't exist
-            new_user = models.User(
-                email=email,
-                name=name,
-                password=utils.get_password_hash("google-auth-placeholder"),  # Placeholder password
-                created_at=datetime.utcnow(),
-            )
-            db.add(new_user)
-            db.commit()
-            db.refresh(new_user)
-            user = new_user
-
-        # Generate JWT token
-        jwt_token = oauth2.create_access_token({"user_id": str(user.id)})
-
-        return schemas.UserAuthOut(
-            access_token=jwt_token,
-            token_type="bearer",
-            user=schemas.User.model_validate(user),
-        )
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}",
-        )
 
 
-router.post(
-    "/email_available",
-    response_model= bool,
+# noinspection PyTypeChecker
+@router.post(
+    "/is_email_available",
+    response_model= dict[str, bool],
 )
 def is_email_available(
-        email: EmailStr,
+        email: EmailRequest,
         db: Session = Depends(get_db),
 ):
     try:
-        user =  db.query(models.User).filter(email == models.User.email).first()
+        user = db.query(models.User).filter(models.User.email == email.email).first()
         if not user:
-            return False
+            return {'is_email_available' : True}
         else:
-            return True
+            return {'is_email_available' : False}
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{str(e)}",
         )
+
+
+# New Google authentication route (Only requests data, no DB storage)
+@router.post("/google_auth", response_model=schemas.UserAuthOut)
+async def google_auth_account(code: CodeRequest = Body(...)):
+    try:
+        # Exchange authorization code for access token
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "code": code.code,
+            "client_id": settings.google_client_id,
+            "client_secret": settings.google_client_secret,
+            "redirect_uri": settings.google_redirect_uri,
+            "grant_type": "authorization_code",
+        }
+
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(token_url, data=token_data)
+            token_response.raise_for_status()  # Raises exception if response isn't 200
+
+        access_token = token_response.json().get("access_token")
+
+        # Fetch user info from Google
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        async with httpx.AsyncClient() as client:
+            user_response = await client.get(user_info_url, headers=headers)
+            user_response.raise_for_status()
+
+        user_data = user_response.json()
+        email = user_data.get("email")
+        name = user_data.get("name", "Google User")
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by Google")
+
+        # Return user data without storing
+        return schemas.UserAuthOut(
+            access_token=access_token,
+            token_type="bearer",
+            user=schemas.User(email=email, name=name, user_type="google")
+        )
+
+    except Exception as e:
+        if isinstance(e, httpx.HTTPStatusError):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error: {str(e)} - Response: {e.response.text}"
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

@@ -58,6 +58,13 @@ class ChangePasswordOut(BaseModel):
     success: bool
     message: str
 
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+class CodeRequest(BaseModel):
+    code: str
+
+
 
 
 # Task schema------------------
